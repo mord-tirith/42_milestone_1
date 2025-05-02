@@ -6,7 +6,7 @@
 /*   By: thenriqu <thenriqu@student.42porto.com>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/22 07:27:48 by thenriqu          #+#    #+#             */
-/*   Updated: 2025/04/22 15:09:19 by thenriqu         ###   ########.fr       */
+/*   Updated: 2025/04/30 17:15:14 by thenriqu         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -116,12 +116,10 @@ char	*ft_main_loop(char *buffer, char *new_line, int fd, ssize_t *bytes)
 		buffer[*bytes] = '\0';
 		if (ft_strchr(buffer, '\n'))
 			return (ft_handle_line(buffer, new_line));
-		new_line = ft_handle_line(buffer, new_line);
+		new_line = ft_join_free(new_line, buffer);
+		ft_carriage(buffer, BUFFER_SIZE);
 		if (!new_line)
-		{
-			ft_carriage(buffer, BUFFER_SIZE);
 			return (NULL);
-		}
 	}
 	return (new_line);
 }
