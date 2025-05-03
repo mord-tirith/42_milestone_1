@@ -201,12 +201,14 @@ Nossos programas recebem de presente do PC acesso à memória RAM disponível qu
 Isso quer dizer que desde o C00 na piscine nós estávamos usando o stack. Quando criamos o nosso ft_putchar(char c), quer adivinhar onde o dito "char c" foi parar na memória do coputador? No stack! E desde o C06 passamos a usar o heap, onde todos nossos mallocs foram parar.
 
 Sabe como **todo maldito malloc que fazemos** precisa ser seguido por uma linha de código dizendo
+
 ```
 arr = malloc(10);
 if (!arr)
     return (NULL);
-	```
-	? Olhando para esse gráfico acima, você pode descobrir o motivo disso! Memória usada no heap cresce de baixo para cima, e no stack é o oposto, de cima para baixo. Isso quer dizer que, toda vez que usamos malloc, há uma _chance_ das duas colidirem: e se seu programa tem 100bytes de memória disponíveis sobrando entre o stack e o heap, e você tenta fazer um malloc(101)? O seu programa vai ver que está prestes a misturar o heap com o stack e dizer: NOPE e negar seu malloc, por isso precisamos sempre ter em mente que "talvez um malloc dê errado!"
+```
+
+? Olhando para esse gráfico acima, você pode descobrir o motivo disso! Memória usada no heap cresce de baixo para cima, e no stack é o oposto, de cima para baixo. Isso quer dizer que, toda vez que usamos malloc, há uma _chance_ das duas colidirem: e se seu programa tem 100bytes de memória disponíveis sobrando entre o stack e o heap, e você tenta fazer um malloc(101)? O seu programa vai ver que está prestes a misturar o heap com o stack e dizer: NOPE e negar seu malloc, por isso precisamos sempre ter em mente que "talvez um malloc dê errado!"
 
 	E é nesse ponto que entra meu profundo desacordo com os que querem fazer GNL com ponteiros: assim como C00 introduziu o stack e C06 introduziu o heap, GNL é nosso momento de finalmente podermos aprender sobre o próximo bloco de memória: Data!
 
