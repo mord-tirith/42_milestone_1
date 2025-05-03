@@ -219,3 +219,30 @@ if (!arr)
 	Tudo que você está fazendo se criar um static char * é dizer "PC, guarde no bloco de memória data o número de um endereço de memória no heap. Depois disso, foda-se data, vou continuar o resto do trabalho como se esse fosse um simples projeto trabalhando com memória heap, tchau."
 
 	Além de garantir que é fisicamente impossível seu GNL não ter memory leaks, você está abandonando todo o propósito do projeto: aprender a usar a memória data!
+
+	#### Pra quê usar a Data?
+
+	Os blocos de memória Unitialized Data e Initialized Data (que são basicamente iguais, Unitialized é só onde vão parar globais e estáticas que você não dá um valor na hora de criar) são especiais. Como você já viu ao usar o statics.c, dados salvos em data são mantidos do começo ao fim do programa, mesmo que a função que os criou termine de ser executada.
+
+	Essa memória também é tratada de forma igual à memória do stack, onde variáveis locais vão parar: você não precisa se preocupar com alocar e depois dar free em nada que coloca na data: o próprio programa vai fazer isso para você, como sua última ação quando estiver acabando de rodar.
+
+	Um outro motivo, bem arcáico e meio obsoleto para se considerar usar a data não é um fator há vários anos, mas vou dizê-lo ainda assim, por motivos históricos: perceba que os blocos de memória são descritos indo de "low address" (endereços baixos) para "high adress" (endereços altos).
+
+	Existe uma diferença _física_ entre onde dados salvos em data, heap e stack vão parar. Se seu PC quer acessar dados no stack, precisa "viajar" mais longe na memória para achá-los. Se vai buscar no heap, é um pouco mais perto. Na data, é o mais rápido que jamais será: apenas o próprio código (que fica salvo no bloco de memória text) é acessível mais rápido pro PC do que dados salvos em data.
+
+	Hoje em dia, com nossos processadores de bilhões de operações por segundo e mais memória do que jamais vamos precisar, isso não importa muito, mas antigamente programas que usavam mais data do que heap ou stack eram mais velozes, apenas porquê a máquina precisava "viajar" menos pra acessar os dados!
+
+	### De volta ao "Next"
+
+	Bem, agora temos o último ingrediente da nossa receita para uma GNL perfeita:
+
+	`static char buffer[BUFFER_SIZE]`
+
+	Com isso do nosso lado, nós podemos eficientemente guardar o que "sobrou" da última vez que devolvemos uma linha e adicionar isso à próxima linha que criarmos quando a função for chamada de novo antes de começarmos a ler mais coisas do arquivo, garantindo que não vamos perder letras!
+
+
+	## 5 Get Next Line
+
+	Este é o fim da parte teórica crianças, hora de botar a mão na massa!
+
+	Acesse a pasta 5_get_next_line, onde o tutorial vai continuar, cobrindo em detalhe como construír sua GNL do começo ao fim!
