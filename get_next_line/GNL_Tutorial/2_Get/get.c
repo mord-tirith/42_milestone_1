@@ -6,7 +6,7 @@
 /*   By: thenriqu <thenriqu@student.42porto.com>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/03 12:14:47 by thenriqu          #+#    #+#             */
-/*   Updated: 2025/05/03 12:43:09 by thenriqu         ###   ########.fr       */
+/*   Updated: 2025/05/03 15:04:19 by thenriqu         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,7 +27,7 @@ char	*get_1(int fd, ssize_t *bytes_read)
 	if (first_line)
 	{
 		*bytes_read += read(fd, first_line, BUFFER_SIZE);
-		first_line[bytes_read] = 0;
+		first_line[*bytes_read] = 0;
 	}
 	return (first_line);
 }
@@ -40,17 +40,22 @@ char	*get_1(int fd, ssize_t *bytes_read)
 	Ou
 	cc get.c -D BUFFER_SIZE=1
 	E veja como ela se comporta!
+	Também tente outros arquivos, trocando o valor da variável "char *file" para outros arquivos
+	teste também ver o que acontece se você colocar como "file" um nome de arquivo que não existe!
+	Por fim, veja o que acontece se você usar o argumento 3 mas descomentar as linhas comentadas
+	na main!
 */
 int	main(int argc, char **argv)
 {
 	int		fd;
+	char	*file = "lyrics.txt";
 	char	*line;
 	ssize_t	bytes;
 
 	bytes = 0;
 	if (argc != 2)
 		return (printf("Pfvr usar uma das opções a seguir:\n1 - get 1x\n2 - get 2x\n3 - get 3x\n"), 0);
-	fd = open("lyrics.txt", O_RDONLY);
+	fd = open(file, O_RDONLY);
 	if (argv[1][0] == '1' || argv[1][0] == '2' || argv[1][0] == '3')
 	{
 		line = get_1(fd, &bytes);
@@ -63,6 +68,8 @@ int	main(int argc, char **argv)
 		printf("%s", line);
 		free(line);
 	}
+	//close(fd);                 // <- Deixar comentadas
+	//fd = open(file, O_RDONLY); // <- A não ser que experimentando!
 	if (argv[1][0] == '3')
 	{
 		line = get_1(fd, &bytes);

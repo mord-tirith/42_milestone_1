@@ -59,3 +59,110 @@ Ou talvez não, mesmo que você esteja do outro lado dessa guerra, acho que há 
 Vamos começar simples: o que é "get"?
 
 Bem, dicionários vão lhe dizer que o verbo significa "pegar" mas isso é meio inútil, então vamos pensar no escopo de nosso projeto: temos que "pegar" uma linha de texto de um arquivo.
+
+Na pasta 2_Get você pode achar um programa simples que faz isso: ele abre um arquivo, salvando o endereço num fd (o arquivo em questão também está na pasta) e tenta ler um pouco de texto dele. Você pode escolher executar o programa com argumento 1, 2 ou 3 para fazer diferentes "repetições."
+
+Estude o código e entenda como ele funciona antes de seguir adiante!
+
+O exemplo desse programa deveria servir para mostrar algumas coisas sobre como a função _read()_ funciona:
+
+#### Detalhes da read()
+
+* 1º 
+Você reparou algo interessante ao usar os comandos 2 ou 3 no programa? A função get_1() nunca mudou, ela sempre faz a mesma coisa: usa _read()_ para ler uma quantidade BUFFER_SIZE de caractéres para dentro da variável first_line. Porém, mesmo a função sendo sempre igual, quando você pediu para o programa rodar ela 2 ou 3 vezes seguidas, _o retorno foi diferente!_
+
+Não só diferente, mas precisamente "a continuação de onde o read() anterior parou," em vez de ter lhe devolvido 3 vezes a mesma linha de texto.
+
+Isso acontece porque a função read() é esperta o bastante para lembrar que já foi chamada antes nesse programa. Desde que você não tenha usado a função _close()_ para fechar o seu fd, a _read()_ vai lembrar onde parou da última vez que foi usada e, se for chamada de novo, vai continuar a ler _a partir daquele ponto._
+
+Isso vai ser incrivelmente útil para nossa GNL, não precisamos nos preocupar em criar uma forma de rastrear o que já foi lido: a _read()_ faz isso sozinha pra gente!
+
+* 2º
+Se você rodou os testes sugeridos no get.c deve ter reparado também o útil retorno negativo, bem como retorno de 0 quando read chega no fim do arquivo inteiro.
+
+Estes retornos nos serão indispensáveis para criar uma GNL capaz de reagir à erros de leitura e ao fim do arquivo.
+
+Mas por hora, vamos falar do próximo passo: line.
+## 3_Line
+
+Pois é, estamos saindo da ordem! Não será "1_get", "2_next", "3_line": vamos falar de "linha" antes de nos preocuparmos com a parte mais difícil.
+
+Da forma que nosso código está até agora, nós podemos ler, mas nunca paramos quando achamos o famigerado \n que estamos caçando.
+
+Para isso, você tem 2 caminhos: criar uma função para caçar um \n ou, minha sugestão pessoal: adicionar seu ft_strchr da _libft_ à lista de funções no seu `get_next_line_utils.c`
+
+A ideia agora vai ser criar uma função que, em vez de apenas ler uma quantidade de bytes do fd, vai continuar lendo até esta coleção de bytes conter o caractér \n.
+
+Porém, surge um problema para encararmos: que tamanho vamos dar ao nosso char * que recebe o texto lido?
+
+Antes, isso era trivial: o destino da read() precisava sempre ter tamanho "BUFFER_SIZE + 1" mas agora isso está mais complexo: e se a gente tiver que ler o buffer 3 vezes antes de achar um \n? E se tivermos que ler ele 15 mil vezes? E se lermos o fd inteiro e *nunca* acharmos um \n!?
+
+É aqui que vamos ter um breve desvio para explorar o verdadeiro coração de uma GNL, uma função sem a qual você não vai poder seguir adiante: a ft_join_free();
+
+### ft_join_free
+
+Malabarismo de ponteiros é uma arte complexa e terrivelmente fácil de dar em grandes erros.
+
+Para criar uma linha que continua aumentando à medida que você adiciona mais texto nela, você precisa criar um ponteiro só pra guardar o ponteiro original, num esquema que rapidamente sai do seu controle. Observe o exemplo adiante, onde eu quero criar uma linha de tamanho 10, depois trocar ela para tamanho 14:
+
+```
+char	*linha;
+
+linha = malloc(10);
+linha = malloc(14);
+
+```
+Quando executar o segundo malloc, você já perdeu o ponteiro original de linha. Por isso, algumas pessoas preferem fazer "malabarismo" com um ponteiro temporário:
+```
+char	*linha;
+char	*temp;
+
+linha = malloc(10);
+temp = linha;
+
+linha = malloc(14);
+free(temp);
+```
+Agora, como temp guarda o endereço original de linha, você deu free no ponteiro abandonado, eba!
+
+Mas há uma forma bem mais simples de lidar com isso: nós iremos precisar adicionar texto num char * que voltará para o usuário. Por quê não simplificar nossa vida e criar a função responsável por essa adição para _já dar free no ponteiro antigo,_ nos deixando livres para escrever o resto do código sem se preocupar com isso?
+
+É dessa ideia que nasce a ft_join_free, uma versão "mutante" da ft_strjoin.
+
+Um passo a passo de como escrever tal função existe na pasta 3_Line, mas eu recomendo altamente que você tente escrever sua própria versão do 0!
+
+Bem, voltando ao assunto principal, agora que temos uma ft_join_free, podemos nos preocupar com a segunda parte implícita na definição de "line:" cortar a linha depois do \n!
+
+### Lidando com o \n
+
+Bem, aqui estamos: nós recebemos um fd do usuário e usamos repetidas chamadas da _read()_ e de nossa ft_join_free para criar uma super linha que contém um monte de texto... Agora, está na hora de devolver isso, mas apenas até o \n, nem um caractér a mais!
+
+Por sorte, a estríta definição do que é uma string em C nos ajuda aqui: uma string é um array de caractéres que contém o caractér nulo (\0).
+
+Isso significa que
+
+`char a[] = {'A', 'm', 'o', ' ', 'G', 'N', 'L'};`
+
+**não** é uma string, e que
+
+`char b[] = {'A', 'm', 'o', ' ', 'G', 'N', 'L', '\0'};`
+
+**é** uma string!
+
+Só que fica melhor que isso:
+
+`char c[] = {'A', 'm', 'o', ' ', 'G', 'N', 'L', '\0', 'M', 'E', 'N', 'T', 'I', 'R', 'A', '!', '!', '\0'};`
+
+**ainda** é uma string... Só que b é igual à c! Tecnicamente, a string termina no primeiro \0 que contem. Qualquer texto sobrando depois daquele \0 faz parte do array, sim, mas _não faz parte da string!_
+
+Se esse é um conceito novo para você, recomendo que brinque um pouco com criar arrays de char dessa forma, declarando explicitamente cara item do array em vez de usar a conveniente simplificação `char d[] = "Odeio strings!"` para confirmar que funções como strlen, strjoin, strlcat ou strcmp todas consideram que a string acabou no primeiro \0 que existia no array!
+
+Isso significa que "se livrar do que há depois do \n" é incrivelmente fácil: precisamos apenas botar um \0 um caractér depois do \n e pronto: nós agora temos uma string que acaba 1 byte depois do \n!
+
+### Antes do Next:
+
+Na próxima sessão vamos começar a falar da parte realmente difícil da GNL: o "next."
+
+Assim sendo, por favor, tome tempo para experimentar com os programas get.c e line.c nas pastas 2_get e 3_next, faça diferentes testes com eles, veja se há problemas, encontre os bugs que existem neles, tente criar sua própria versão desses programas, porquê nós vamos embarcar numa jornada de variáveis estáticas e loucura no próximo passo, então tente garantir que está com tudo em ordem nessa parte antes de seguir adiante!
+
+
