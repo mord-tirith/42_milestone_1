@@ -1,4 +1,4 @@
-eu projeto:
+## 1: Entendendo seu projeto:
 
 _Get_Next_Line_ é um programa bastante auto explicativo. Ao contrário de outros projetos que veremos mais adiante na _Milestone_ 2, este é bem "faz o que diz que faz": temos que criar uma função que "pega a próxima linha" de um arquivo.
 
