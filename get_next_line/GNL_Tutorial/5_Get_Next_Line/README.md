@@ -90,16 +90,16 @@ Você vai precisar de **duas** variáveis char para criar sua get_next_line:
 ```
 char    *get_next_line(int fd){
     static char buffer[BUFFER_SIZE + 1];
-    char        *next_line;
+    char        *new_line;
     ssize_t     bytes_read;
 
-    next_line = NULL;
+    new_line = NULL;
     bytes_read = 1;
 }
 ```
 E isso é tudo!
 
-next_line é a string que nós vamos criar aos poucos quando formos lendo do fd que o usuário mandou. Vai ser ela que vamos constantemente mandar para a nossa ft_join_free, para ser trocada por uma nova versão da next_line que contém o texto que já havia em next_line antes, bem como o que quer que esteja dentro do buffer.
+new_line é a string que nós vamos criar aos poucos quando formos lendo do fd que o usuário mandou. Vai ser ela que vamos constantemente mandar para a nossa ft_join_free, para ser trocada por uma nova versão da new_line que contém o texto que já havia em new_line antes, bem como o que quer que esteja dentro do buffer.
 
 Enquanto isso buffer é nossa variável estática para o projeto (nossa ÚNICA estática, pois estamos caçando 125 pontos aqui!): vai ser para dentro da buffer que vamos mandar a função _read()_ enviar o texto puxado de nosso fd e, graças ao fato de buffer ser estático e graças à nossa função ft_memmove_nl, ele será nossa chave para guardar restos de uma leitura passada.
 
@@ -121,9 +121,9 @@ No exemplo do YouTube, o buffer representa a parte do vídeo que sua internet _j
 
 Um exemplo simples de como buffers funcionam pode ser visto se você usar uma internet meio lenta (algo como o 3g de seu celular?) e abrir um vídeo no YouTube: você vai perceber que pode pular adiante no vídeo sem ter que esperar que o aplicativo carregue, _desde que seu salto tenha ocorrido dentro do buffer,_ mas se você tentar pular para fora do buffer, vai ter que esperar enquanto o YouTube carrega aquela parte do vídeo: ela não estava pronta ainda!
 
-Eu escolho o nome "buffer" para a variável estática da get_next_line porquê é exatamente isso que ela faz: quando usamos _read()_ para ler dados do fd, estamos "bufferizando" aquela informação. Eventualmente, vamos mandar esses dados do buffer para a linha que o usuário vai receber.
+Eu escolho o nome "buffer" para a variável estática da get_new_line porquê é exatamente isso que ela faz: quando usamos _read()_ para ler dados do fd, estamos "bufferizando" aquela informação. Eventualmente, vamos mandar esses dados do buffer para a linha que o usuário vai receber.
 
-Quando devolvemos a next_line para o usuário, se sobra dados no buffer, é para isso que um buffer serve: guardar memória que já foi baixada (ou "lida" em nosso caso) e que ainda não foi usada!
+Quando devolvemos a new_line para o usuário, se sobra dados no buffer, é para isso que um buffer serve: guardar memória que já foi baixada (ou "lida" em nosso caso) e que ainda não foi usada!
 
 #### 2.b - O loop central
 
@@ -225,9 +225,9 @@ char    *get_next_line(int fd)
     static char buffer[BUFFER_SIZE + 1];
     char        *new_line;
 
-    next_line = NULL;
-    next_line = ft_read_loop(buffer, new_line);
-    retun (next_line);
+    new_line = NULL;
+    new_line = ft_read_loop(buffer, new_line);
+    retun (new_line);
 }
 ```
 
@@ -246,10 +246,10 @@ char    *get_next_line(int fd)
     static char buffer[BUFFER_SIZE + 1];
     char        *new_line;
 
-    next_line = NULL;
-    next_line = ft_read_loop(buffer, new_line);
-    next_line = ft_handle_nl(buffer, new_line);
-    retun (next_line);
+    new_line = NULL;
+    new_line = ft_read_loop(buffer, new_line);
+    new_line = ft_handle_nl(buffer, new_line);
+    retun (new_line);
 }
 ```
 E vamos pensar no que essa função precisa fazer: botar um \0 um carácter depois do primeiro \n na new_line, depois chamar nossa ft_memmove_nl para deixar o buffer pronto para a próxima chamada. Isso é fácil:
@@ -275,3 +275,78 @@ Agora, é hora de dor de cabeça: vamos pegar a PRÓXIMA linha!
 
 #### 2.d - A próxima linha
 
+Graças às nossas helpers e a estarmos usando um array para nosso buffer, é muito fácil descobrirmos se estamos ou não na "primeira chamada" da GNL: basta verificarmos se o que está salvo no index 0 do buffer é ou não é um caractér nulo.
+
+Imagine esse exemplo, onde o seguinte bloco de texto entrou no buffer na chamada anterior:
+
+`abcdefghijklmnopqrstuvwxyz\n0123456789\0`
+
+Nossa nova ft_handle_nl já devolveu o seguinte array para nosso usuário:
+
+`abcdefghijklmnopqrstuvwxyz\n\0123456789\0`
+
+Que, graças ao fato de strings em C acabarem no primeiro \0 que contém, significa que o usuário recebeu a seguinte string:
+
+`"abcdefghijklmnopqrstuvwxyz\n"`
+
+Também, por causa de como nossa ft_memmove_nl funciona, o que ficou salvo no nosso array estático foi:
+
+`0123456789\0`
+
+Quando a get_next_line é chamada de novo, basta a gente verificar se o primeiro caractér no buffer é um \0 ou não e, se for, adicionar esse "resto" à new_line antes de seguirmos adiante para o loop de leitura!
+
+```
+char    *get_next_line(int fd)
+{
+    static char buffer[BUFFER_SIZE + 1];
+    char        *new_line;
+
+    new_line = NULL;
+    if (buffer[0] != '\0')
+        new_line = ft_join_free(new_line, buffer);
+    new_line = ft_read_loop(buffer, new_line);
+    new_line = ft_handle_nl(buffer, new_line);
+    retun (new_line);
+}
+```
+Boom, lidamos com sobras baby!
+
+Agora, se houver mais texto depois do fim daquela string louca, nossa get_next_line vai adicionar o que a read() encontrar _depois_ do que sobrou da última chamada!
+
+Há um extra se você quiser:
+```
+if (ft_locate_nl(buffer) >= 0)
+    return (ft_handle_nl(buffer, new_line));
+```
+Essa condicional adicionada logo depois da anterior tem um efeito lindo: ao invés de perder tempo entrando no loop, se você sabe que já há uma linha nova inteira dentro do buffer, incluíndo uma nova \n, não precisa fazer todo o trabalho da get_next_line: basta tratar esse \n com nossa ft_handle_nl e devolver o resultado pro usuário!
+
+Isso lida com casos onde o buffer depois de uma leitura tinha algo assim salvo neles:
+
+`abcdefghijklmnopqrstuvwxyz\n0123456789\nABCDEF`
+
+Quando devolvemos a primeira string pro usuário, isso sobrou no buffer:
+
+`0123456789\nABCDEF`
+
+Com essa nova verificação adicionada, nossa get_next_line vai perceber: "epa, já há uma \n nova no buffer atual, só preciso devolver '0123456789\n' pro usuário e meu trabalho acabou" sem perder tempo!
+
+Portanto, nossa get_next_line acaba sendo:
+
+```
+char    *get_next_line(int fd)
+{
+    static char buffer[BUFFER_SIZE + 1];
+    char        *new_line;
+
+    new_line = NULL;
+    if (buffer[0] != '\0')
+        new_line = ft_join_free(new_line, buffer);
+    if (ft_locate_nl(buffer) >= 0)
+        return (ft_handle_nl(buffer, new_line));
+    new_line = ft_read_loop(buffer, new_line);
+    new_line = ft_handle_nl(buffer, new_line);
+    retun (new_line);
+}
+```
+
+E nosso trabalho está 99.9% completo!
