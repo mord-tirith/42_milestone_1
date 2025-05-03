@@ -1,5 +1,4 @@
-
-## 1 Entendendo seu projeto:
+eu projeto:
 
 _Get_Next_Line_ é um programa bastante auto explicativo. Ao contrário de outros projetos que veremos mais adiante na _Milestone_ 2, este é bem "faz o que diz que faz": temos que criar uma função que "pega a próxima linha" de um arquivo.
 
@@ -166,3 +165,57 @@ Na próxima sessão vamos começar a falar da parte realmente difícil da GNL: o
 Assim sendo, por favor, tome tempo para experimentar com os programas get.c e line.c nas pastas 2_get e 3_next, faça diferentes testes com eles, veja se há problemas, encontre os bugs que existem neles, tente criar sua própria versão desses programas, porquê nós vamos embarcar numa jornada de variáveis estáticas e loucura no próximo passo, então tente garantir que está com tudo em ordem nessa parte antes de seguir adiante!
 
 
+## 4_Next
+
+Bem vindos ao pesadelo (=
+
+Antes de começarmos, vamos ver porquê essa sessão é necessária: experimente rodar o programa broken_next.c encontrado na pasta 4_Next.
+
+Repare que o output do programa é quebrado: a primeira linha volta exatamente como queremos, todo texto até a primeira ocorrência de um \n, depois nada, perfeito!
+
+Mas a segunda chamada da função retorna uma linha com algumas letras perdidas no começo.
+
+Isso está acontecendo porquê, como estabelecemos lá atrás na parte **1 - Entendendo seu projeto:", a função _read()_ é esperta e lembra o que já leu!
+
+Como estamos lendo BUFFER_SIZE bytes do fd (caso você não declare um novo BUFFER_SIZE, o padrão em todos esses programas é 42), a segunda vez que chamamos a função, _read()_ vai continuar a ler de onde parou. Se havia texto depois da primeira \n, isso vai ser jogado fora!
+
+Agora é hora de revelar nossa arma secreta para esse projeto: variáveis estáticas!
+
+Experimente com o programa statics.c, também localizado na 4_Next. Entendeu o que está acontecendo aqui?
+
+Uma variável estática, ao contrário de uma variável local comum, _só para de existir quando o programa que a criou termina de rodar._ Toda vez que o programa statics.c chama a função count_local(), ele está criando uma **nova** variável local chamada i, guardando o número 0 nela, adicionando 1 ao 0 e retornando esse total. Quando a função count_local() retorna, i é apagada, destruída, assassinada, joga contra a Alemãnha numa copa em seu país natal etc..
+
+Porém, a variável i que existe dentro da função count_static é diferente, especial: ela lembra que valor tinha quando foi chamada da última vez, e só vai ser apagada quando o programa terminar de rodar!
+
+Além disso, se você brincou com os comentários na declaração de i dentro da count_static() já deve saber disso, mas variáveis estáticas, ao contrário das locais, _são iniciadas com valor determinado!_ Caso você não declare nada, o computador vai presumir que você queria um 0 salvo nela, portanto, não há diferença entre criar "static int i = 0" ou "static int i", ambas são iguais!
+
+É aqui que, pela primeira vez, irei abandonar completamente o uso de ponteiros para o buffer, pois precisamos falar das diferentes memórias que o computador possuí...
+
+### Memories...
+![illinois grainger CS 225](https://courses.grainger.illinois.edu/cs225/fa2022/assets/notes/stack_heap_memory/memory_layout.png)
+
+O confundidor diagrama acima é a versão MENOS confusa que achei disso xD
+
+Nossos programas recebem de presente do PC acesso à memória RAM disponível quando são executados. C, sendo uma língua responsável, tem um complexo método de trabalhar com essa memória: ele guarda variáveis locais (como a int i da count_local!) na parte chamada stack. Dentro do heap está o que nós usamos desde o C06: memória alocada com malloc, calloc etc..
+
+Isso quer dizer que desde o C00 na piscine nós estávamos usando o stack. Quando criamos o nosso ft_putchar(char c), quer adivinhar onde o dito "char c" foi parar na memória do coputador? No stack! E desde o C06 passamos a usar o heap, onde todos nossos mallocs foram parar.
+
+Sabe como **todo maldito malloc que fazemos** precisa ser seguido por uma linha de código dizendo
+```
+arr = malloc(10);
+if (!arr)
+    return (NULL);
+	```
+	? Olhando para esse gráfico acima, você pode descobrir o motivo disso! Memória usada no heap cresce de baixo para cima, e no stack é o oposto, de cima para baixo. Isso quer dizer que, toda vez que usamos malloc, há uma _chance_ das duas colidirem: e se seu programa tem 100bytes de memória disponíveis sobrando entre o stack e o heap, e você tenta fazer um malloc(101)? O seu programa vai ver que está prestes a misturar o heap com o stack e dizer: NOPE e negar seu malloc, por isso precisamos sempre ter em mente que "talvez um malloc dê errado!"
+
+	E é nesse ponto que entra meu profundo desacordo com os que querem fazer GNL com ponteiros: assim como C00 introduziu o stack e C06 introduziu o heap, GNL é nosso momento de finalmente podermos aprender sobre o próximo bloco de memória: Data!
+
+	#### Data
+
+	Apenas 2 tipos de coisas são salvas no bloco Data: variáveis globais e variáveis estáticas. Porém, bem, a Norma nos proíbe de jamais sonhar em usar variáveis globais, então nossa única chance de brincar com as estranhas propriedades desse bloco de memória é com variáveis estáticas, que são introduzidas no GNL.
+
+	Você **pode** criar um `static char *buffer` e depois fazer um `buffer = malloc(BUFFER_SIZE + 1)`, mas fazer isso é jogar fora toda chance de aprender sobre estáticas nesse exercício!
+
+	Tudo que você está fazendo se criar um static char * é dizer "PC, guarde no bloco de memória data o número de um endereço de memória no heap. Depois disso, foda-se data, vou continuar o resto do trabalho como se esse fosse um simples projeto trabalhando com memória heap, tchau."
+
+	Além de garantir que é fisicamente impossível seu GNL não ter memory leaks, você está abandonando todo o propósito do projeto: aprender a usar a memória data!
