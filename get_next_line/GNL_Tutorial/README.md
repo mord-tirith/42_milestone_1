@@ -1,5 +1,42 @@
 # Episódio 1: A teoria da Get_Next_Line
-## 1: Entendendo seu projeto:
+
+**Índice**
+  * [Entendendo seu projeto](#entendendo-seu-projeto)
+	<details> <summary>Ver sub sessões:</summary>
+		
+	- [Retorno](#retorno)
+	- [Parametros](#parametros)
+	- [Retorno](#retorno-1)
+	- [Parametros](#parametros-1)
+	</details>
+  * [Get](#get)
+      - [Detalhes da read](#detalhes-da-read)
+  * [Line](#line)
+	<details> <summary>Ver sub sessões:</summary>
+	
+	+ [ft join free](#ft-join-free)
+	+ [Lidando com line break](#lidando-com-line-break)
+	+ [Antes do Next](#antes-do-next)
+	</details>
+  * [Next](#next)
+	<details> <summary>Ver sub sessões:</summary>
+    
+	+ [Memories](#memories)
+	- [Data](#data)
+	- [Why Data](#why-data)
+	- + [De volta ao Next](#de-volta-ao-next)
+	</details>
+  * [Get Next Line](#get-next-line)
+- [Bonus - ponteiros vs array](#bonus---ponteiros-vs-array)
+	<details> <summary>Ver sub sessões:</summary>
+	
+	* [Motivo 1 - Data](#motivo-1---data)
+  	* [Motivo 2 - next line vs all lines](#motivo-2---next-line-vs-all-lines)
+  	* [Motivo 3 - qualquer tamanho de buffer](#motivo-3---qualquer-tamanho-de-buffer)
+  	* [Motivo 4 - dificuldade](#motivo-4---dificuldade)
+	</details>
+
+## Entendendo seu projeto
 
 _Get_Next_Line_ é um programa bastante auto explicativo. Ao contrário de outros projetos que veremos mais adiante na _Milestone_ 2, este é bem "faz o que diz que faz": temos que criar uma função que "pega a próxima linha" de um arquivo.
 
@@ -9,11 +46,11 @@ O protótipo da função tem que ser:
 
 Quebrando em partes para entender tudo, podemos ver que estamos lidando com:
 
-#### Retorno:
+#### Retorno
 
 `char*` - A função devolve um ponteiro de char, ou seja, "uma _string_" que consiste da próxima linha de texto.
 
-#### Parâmetros:
+#### Parametros
 `int fd` - A função recebe um _File Descriptor_ para saber onde vai buscar esta "próxima linha."
 
 Além do protótipo, o _Subject_ da GNL foi legal o bastante para nos avisar que vamos ter que usar a função _read()_ para ler este fd. Então também é bom darmos uma olhadinha no que a tal da _read()_ faz antes de seguir adiante:
@@ -22,7 +59,7 @@ Além do protótipo, o _Subject_ da GNL foi legal o bastante para nos avisar que
 
 Vamos quebrar ela em partes também, já que é um pouco mais complexa:
 
-#### Retorno:
+#### Retorno
 `ssize_t` - Para quem não usou ele na _libft_, bem vindo ao _ssize_t_! Este tipo de variável é parecido com a _size_t_ que usamos para controlar _strings_ com segurança na _libft_, mas um pouco diferente: _ssize_t_ é capaz de guardar números negativos além de positivos, ao contrário da _size_t_.
 
 _read()_ precisa desse tipo de retorno porquê ela normalmente lhe devolve "a quantidade de bytes que foram lidos do arquivo indicado," mas se acontecer algum erro de leitura a _read()_ lhe devolve um valor negativo para especificar qual erro aconteceu.
@@ -31,7 +68,7 @@ Quando tudo corre bem, o retorno é apenas a quantidade de bytes bem lidos. Isso
 
 Caso _read()_ perceba que chegou no fim do arquivo, ela vai retornar 0.
 
-#### Parâmetros:
+#### Parametros
 `int fd` - Esse é fácil: qual arquivo estamos lendo? É o terminal (1), o que o usuário está escrevendo (0), uma mensagem de erro (2) ou um novo arquivo que o programa abriu (3, 4,..)?
 
 `void *buffer` - Se prepare para ouvir a palavra "buffer" um quadrilhão de vezes durante este projeto. Por hora basta saber que este `void *buffer` é "onde _read()_ vai guardar o resultado da sua leitura:" o que quer que exista no arquivo será copiado para dentro desse buffer.
@@ -44,7 +81,7 @@ Para nossa sorte (?) este é bem simples no GNL: você sempre irá usar o macro 
 
 Bem, agora que temos uma noção geral das partes de nossa função GNL e da função _read()_ que iremos utilizar, vamos começar a falar de escrever nosso código!
 
-## 2 Get
+## Get
 
 Vamos começar simples: o que é "get"?
 
@@ -56,7 +93,7 @@ Estude o código e entenda como ele funciona antes de seguir adiante!
 
 O exemplo desse programa deveria servir para mostrar algumas coisas sobre como a função _read()_ funciona:
 
-#### Detalhes da read()
+#### Detalhes da read
 
 * 1º 
 Você reparou algo interessante ao usar os comandos 2 ou 3 no programa? A função get_1() nunca mudou, ela sempre faz a mesma coisa: usa _read()_ para ler uma quantidade BUFFER_SIZE de caractéres para dentro da variável first_line. Porém, mesmo a função sendo sempre igual, quando você pediu para o programa rodar ela 2 ou 3 vezes seguidas, _o retorno foi diferente!_
@@ -73,7 +110,7 @@ Se você rodou os testes sugeridos no get.c deve ter reparado também o útil re
 Estes retornos nos serão indispensáveis para criar uma GNL capaz de reagir à erros de leitura e ao fim do arquivo.
 
 Mas por hora, vamos falar do próximo passo: line.
-## 3_Line
+## Line
 
 Pois é, estamos saindo da ordem! Não será "1_get", "2_next", "3_line": vamos falar de "linha" antes de nos preocuparmos com a parte mais difícil.
 
@@ -89,7 +126,7 @@ Antes, isso era trivial: o destino da read() precisava sempre ter tamanho "BUFFE
 
 É aqui que vamos ter um breve desvio para explorar o verdadeiro coração de uma GNL, uma função sem a qual você não vai poder seguir adiante: a ft_join_free();
 
-### ft_join_free
+### ft join free
 
 Malabarismo de ponteiros é uma arte complexa e terrivelmente fácil de dar em grandes erros.
 
@@ -123,7 +160,7 @@ Um passo a passo de como escrever tal função existe na pasta 3_Line, mas eu re
 
 Bem, voltando ao assunto principal, agora que temos uma ft_join_free, podemos nos preocupar com a segunda parte implícita na definição de "line:" cortar a linha depois do \n!
 
-### Lidando com o \n
+### Lidando com line break
 
 Bem, aqui estamos: nós recebemos um fd do usuário e usamos repetidas chamadas da _read()_ e de nossa ft_join_free para criar uma super linha que contém um monte de texto... Agora, está na hora de devolver isso, mas apenas até o \n, nem um caractér a mais!
 
@@ -149,14 +186,14 @@ Se esse é um conceito novo para você, recomendo que brinque um pouco com criar
 
 Isso significa que "se livrar do que há depois do \n" é incrivelmente fácil: precisamos apenas botar um \0 um caractér depois do \n e pronto: nós agora temos uma string que acaba 1 byte depois do \n!
 
-### Antes do Next:
+### Antes do Next
 
 Na próxima sessão vamos começar a falar da parte realmente difícil da GNL: o "next."
 
 Assim sendo, por favor, tome tempo para experimentar com os programas get.c e line.c nas pastas 2_get e 3_next, faça diferentes testes com eles, veja se há problemas, encontre os bugs que existem neles, tente criar sua própria versão desses programas, porquê nós vamos embarcar numa jornada de variáveis estáticas e loucura no próximo passo, então tente garantir que está com tudo em ordem nessa parte antes de seguir adiante!
 
 
-## 4_Next
+## Next
 
 Bem vindos ao pesadelo (=
 
@@ -182,7 +219,7 @@ Além disso, se você brincou com os comentários na declaração de i dentro da
 
 É aqui que, pela primeira vez, irei abandonar completamente o uso de ponteiros para o buffer, pois precisamos falar das diferentes memórias que o computador possuí...
 
-### Memories...
+### Memories
 ![illinois grainger CS 225](https://courses.grainger.illinois.edu/cs225/fa2022/assets/notes/stack_heap_memory/memory_layout.png)
 
 O confundidor diagrama acima é a versão MENOS confusa que achei disso xD
@@ -213,7 +250,7 @@ Tudo que você está fazendo se criar um static char * é dizer "PC, guarde no b
 
 Além de garantir que é fisicamente impossível seu GNL não ter memory leaks, você está abandonando todo o propósito do projeto: aprender a usar a memória data!
 
-#### Pra quê usar a Data?
+#### Why Data
 
 Os blocos de memória Unitialized Data e Initialized Data (que são basicamente iguais, Unitialized é só onde vão parar globais e estáticas que você não dá um valor na hora de criar) são especiais. Como você já viu ao usar o statics.c, dados salvos em data são mantidos do começo ao fim do programa, mesmo que a função que os criou termine de ser executada.
 
@@ -225,14 +262,14 @@ Existe uma diferença _física_ entre onde dados salvos em data, heap e stack v�
 
 Hoje em dia, com nossos processadores de bilhões de operações por segundo e mais memória do que jamais vamos precisar, isso não importa muito, mas antigamente programas que usavam mais data do que heap ou stack eram mais velozes, apenas porquê a máquina precisava "viajar" menos pra acessar os dados!
 
-### De volta ao "Next"
+### De volta ao Next
 
 Bem, agora temos o último ingrediente da nossa receita para uma GNL perfeita:
 `static char buffer[BUFFER_SIZE]`
 
 Com isso do nosso lado, nós podemos eficientemente guardar o que "sobrou" da última vez que devolvemos uma linha e adicionar isso à próxima linha que criarmos quando a função for chamada de novo antes de começarmos a ler mais coisas do arquivo, garantindo que não vamos perder letras!
 
-## 5 Get Next Line
+## Get Next Line
 
 Este é o fim da parte teórica crianças, hora de botar a mão na massa!
 Eu recomendaria, do fundo de meu coração, que você tirasse esse momento para tentar escrever sua GNL. Desenhe o diagrama do código, faça notas do que vai precisar, pergunte ao chat GPT o que ele acha...
@@ -241,7 +278,7 @@ Por favor, _tente_ fazer ela com base apenas nessa parte teórica, pois eu vou e
 
 Caso queira continuar para o passo à passo, acesse a pasta 5_get_next_line, onde o tutorial vai continuar, cobrindo em detalhe como construír sua GNL do começo ao fim!
 
-# Bonus: ponteiros vs array
+# Bonus - ponteiros vs array
 
 Bem, eu tinha que falar disso...
 
@@ -280,7 +317,7 @@ Por isso, meu voto é: não, não devemos dar 0 com causa de "Memory Leak" para 
 
 Agora, se me permitem me indulgir um pouco, vem a parte contraditória: apesar de considerar que, para os propósitos do projeto conforme aparece na Milestone 1, podemos deixar passar, eu considero, sem sombra de dúvida alguma, que escrever seu GNL com ponteiros em vez de array é inquestionavelmente _errado._
 
-## Motivo 1: Data
+## Motivo 1 - Data
 Como discuti acima na parte teórica, um dos intuitos da GNL é nos familiarizar com variáveis estáticas. Criar um ponteiro estático que aponta para um endereço de memória do heap _não é usar variáveis estáticas._ Ao fazer isso, você está misturando os dois tipos de memória, num ato que está _implorando_ para causar problemas (problemas como o inevitável vazamento de memória de BUFFER_SIZE + 1).
 
 Além disso, ver um projeto feito com ponteiros me faz questionar: quão a sério esse aluno levou o estudo das static variables que o subject da GNL recomendou que fizéssemos?
@@ -289,7 +326,7 @@ Pela primeira vez na 42, esse projeto nos convida a estudar sobre os diferentes 
 
 Claro, algumas (talvez todas) questões podiam/deviam ter sido consideradas lá atrás no C06. Talvez você já as tenha ponderado, não sei. Mas para mim, GNL acabou sendo um momento de aprendizado incrível... Que eu podia ter jogado completamente fora criando um ponteiro estático para o heap.
 
-## Motivo 2: get_NEXT_line, não get_ALL_lineS
+## Motivo 2 - next line vs all lines
 
 Um argumento comum dos que acham que GNL deve ser sempre feita com ponteiros é que "hey, se o usuário usar minha GNL para ler todas linhas de um arquivo do começo ao fim, não há memory leaks!"
 
@@ -316,7 +353,7 @@ Agora considere: o que uma GNL com ponteiros faz é o OPOSTO disso! Em vez de ha
 
 Então seria mais como se a condição desnecessária fosse `if (size *n != 42)`!
 
-## Motivo 3: "qualquer BUFFER_SIZE"
+## Motivo 3 - qualquer tamanho de buffer
 
 Outra justificativa comum de se encontrar é que "hey, o meu GNL não dá memory leak se o usuário rodar ele com BUFFER_SIZE=1! Se você rodar com BUFFER_SIZE=2 ou mais, é culpa sua!"
 
@@ -345,7 +382,7 @@ size_t    ft_strlen(char *str)
 ```
 Basta argumentar que "hey, desde que o usuário tenha usado essa strlen de forma correta e tenha enviado uma string que tinha 42 caractéres, minha função pega! Okay, o resultado dela dá errado para qualquer outro tamanho de string, mas existe um caso entre 0 e SIZE_MAX no qual ela dá o resultado correto, então é uma strlen perfeita!"
 
-## Motivo 4: _não_ é mais difícil
+## Motivo 4 - dificuldade
 
 Um argumento que me deixa triste por ser tão comum é que "eu vou fazer meu GNL com ponteiro em vez de array, fazer com array é confuso demais, nada faz sentido!"
 
