@@ -43,16 +43,6 @@ Para nossa sorte (?) este é bem simples no GNL: você sempre irá usar o macro 
 
 Bem, agora que temos uma noção geral das partes de nossa função GNL e da função _read()_ que iremos utilizar, vamos começar a falar de escrever nosso código!
 
-
-### 1.a A guerra dos ponteiros
-
-Uma breve mensagem do autor para você: este tutorial leva em consideração, sem nenhuma pretenção, que uma GNL que utiliza um ponteiro para manter sua variável estática é inquestionavelmente 100% _errada,_ e merece uma nota 0 em avaliações por motivo de _Memory Leak._
-
-Assim sendo, este tutorial será completamente voltado à criação de uma GNL que trabalha com uma única variável estática, um array, **não** um ponteiro.
-
-Caso você prefira fazer sua GNL com ponteiros e esteja disposto a jogar os dados que ninguém que lhe avaliará vai pensar em rodar valgrind num teste que não percorra o arquivo inteiro, talvez você queira sair deste tutorial agora.
-
-Ou talvez não, mesmo que você esteja do outro lado dessa guerra, acho que há coisas boas para se aprender aqui, então você que sabe!
 ## 2 Get
 
 Vamos começar simples: o que é "get"?
