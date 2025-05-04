@@ -1,12 +1,34 @@
 
-# GNL: passo à passo!
-
-
-## 1 - get_next_line.h - Parte 1!
+# GNL: passo a passo
+**Índice:**
+- [1 - get next line-h](#1---get-next-line-h)
+  * [1-a Macros](#1-a-macros)
+  * [1 - b Macros alteraveis ao compilar](#1---b-macros-alteraveis-ao-compilar)
+- [2 get-next-lin-c](#2-get-next-lin-c)
+  * [2-a Suas variaveis](#2-a-suas-variaveis)
+    + [2-a-I buffer](#2-a-i-buffer)
+  * [2-b O loop central](#2-b-o-loop-central)
+  * [2-c ft-handle-nl](#2-c-ft-handle-nl)
+  * [2-d Next line](#2-d-next-line)
+  * [2-e Todos malditos edgecases](#2-e-todos-malditos-edgecases)
+    + [2-e-I Se o fd ou BUFFER-SIZE n existem](#2-e-i-se-o-fd-ou-buffer-size-n-existem)
+    + [2-e-II Se o arquivo tem o tamanho exato de BUFFER-SIZE](#2-e-ii-se-o-arquivo-tem-o-tamanho-exato-de-buffer-size)
+    + [2-e-III Se o aquivo tem a mesma quantidade de bytes que o BUFFER-SIZE mas tem um linebreak](#2-e-iii-se-o-aquivo-tem-a-mesma-quantidade-de-bytes-que-o-buffer-size-mas-tem-um-linebreak)
+    + [2-e-IV Round Surpresa - Se eu usei ponteiro em vez de array](#2-e-iv-round-surpresa---se-eu-usei-ponteiro-em-vez-de-array)
+- [3 get-next-line-utils-c](#3-get-next-line-utils-c)
+  * [ft-join-free](#ft-join-free)
+    + [ft-join-free-a join](#ft-join-free-a-join)
+    + [ft-join-free-b free](#ft-join-free-b-free)
+  * [ft-locate-nl](#ft-locate-nl)
+  * [ft-memmove-nl](#ft-memmove-nl)
+  * [ft-safe-free](#ft-safe-free)
+- [4 get-next-line-bonus-c](#4-get-next-line-bonus-c)
+- [Fin](#fin)
+## 1 - get next line-h
 
 Vamos começar do começo: o _subject_ nos avisa que vamos precisar de um macro chamado BUFFER_SIZE para rodar esse programa, e que este macro precisa ser alterável na hora de compilar o código pelo usuário para qualquer valor que deseje.
 
-### 1.a - Macros
+### 1-a Macros
 
 O que nos deixa com uma pergunta: o que p**** é um "macro"?
 
@@ -44,7 +66,7 @@ Pois é: essa loucura AINDA RODA sem problemas! Isso acontece porquê, como diss
 
 Agora, como a norminette é uma desgraçada, nós só podemos declarar macros dentro de nossos arquivos .h, nunca nos .c . Isso não é grande problema, só precisamos saber que na nossa get_next_line.h precisamos ter uma linha dizendo `# define BUFFER_SIZE 1`, com "1" sendo qualquer número que você queira. Eu pessoalmente sempre uso 42 pq, enfim né, motivos óbvios.
 
-### 1.b - Macros alteráveis ao compilar
+### 1 - b Macros alteraveis ao compilar
 
 Mas pera, o GNL não tem um "BUFFER_SIZE que é sempre um valor": eles mandaram a função ser "ajustável pelo usuário." Como vamos fazer isso?
 
@@ -66,7 +88,7 @@ O primeiro ifndef declara nossa bibliotéca, o segundo checa: "alguém já decid
 Se os espaços entre as #s lhe incomoda: bem vindo ao nojo que é a norminette em arquivos .h, todos nós odiamos isso, welcome to the club.
 
 
-## 2 - get_next_line.c
+## 2 get-next-lin-c
 
 Agora que temos nosso BUFFER_SIZE, é hora de começarmos a verdadeira brincadeira.
 
@@ -82,7 +104,7 @@ Vamos criar essas helpers no próximo passo, mas para você acompanhar o tutoria
 
 Com essas 4 helpers na nossa mente, podemos conquistar o GNL!
 
-### 2.a - Suas variáveis
+### 2-a Suas variaveis
 
 Uma das maiores vantagens do método "array em vez de pointer" é quão simples sua get_next_line() vai acabar sendo. Pessoas que trabalham com ponteiro precisam ter ao menos 3, quase sempre 4, as vezes mais de 10 diferentes variáveis tipo char * para fazer o malabarismo todo.
 
@@ -105,7 +127,7 @@ Enquanto isso buffer é nossa variável estática para o projeto (nossa ÚNICA e
 
 Isso nos trás à uma importante pergunta: o que diabos é um "buffer"?
 
-#### 2.a.I "buffer"
+#### 2-a-I buffer
 
 Lembra uns 10 anos atrás quando apenas os ricos tinham acesso à "internet incrivelmente rápida de 10mb/s" e você queria acessar um vídeo no YouTube ou assitir algo na Netflix, mas a cada 10 segundos de visualização a tela congelava, ficava escura e uma irritante seta começava a girar na tela, com texto dizendo "Bufferizando vídeo"?
 
@@ -125,7 +147,7 @@ Eu escolho o nome "buffer" para a variável estática da get_new_line porquê é
 
 Quando devolvemos a new_line para o usuário, se sobra dados no buffer, é para isso que um buffer serve: guardar memória que já foi baixada (ou "lida" em nosso caso) e que ainda não foi usada!
 
-### 2.b - O loop central
+### 2-b O loop central
 
 Agora que temos um buffer e uma new_line, é hora de jogar dados do fd para essa new_line!
 
@@ -237,7 +259,7 @@ Experimente usar fds inválidos, arquivos com muito texto que nunca contém uma 
 
 Se divertiu? Okay, hora de adicionar uma parte vital da GNL ao nosso código: como lidamos com \n?
 
-### 2.c - ft_handle_nl
+### 2-c ft-handle-nl
 
 Dessa vez não vamos nem fingir que o que vamos fazer vai caber na nossa get_next_line: a norminette nos odeia demais para isso. Portanto, vamos apenas adicionar uma chamada à função que lida com \n antes de devolver a linha pro usuário:
 ```
@@ -273,7 +295,7 @@ Se rodar como está agora, vai perceber que melhoramos bastante: se tentar ler u
 
 Agora, é hora de dor de cabeça: vamos pegar a PRÓXIMA linha!
 
-### 2.d - A próxima linha
+### 2-d Next line
 
 Graças às nossas helpers e a estarmos usando um array para nosso buffer, é muito fácil descobrirmos se estamos ou não na "primeira chamada" da GNL: basta verificarmos se o que está salvo no index 0 do buffer é ou não é um caractér nulo.
 
@@ -351,11 +373,11 @@ char    *get_next_line(int fd)
 
 E nosso trabalho está 99.9% completo!
 
-### 2.e - Todos malditos edgecases
+### 2-e Todos malditos edgecases
 
 Há um milhão de edgecases quando se trabalha com GNL: exemplos de uso estranhos e/ou extremos nos quais sua GNL ainda deve retornar a linha sem problemas. Vamos começar a caçar esses um por um!
 
-#### 2.e.I - "E se o fd ou BUFFER_SIZE não existem?"
+#### 2-e-I Se o fd ou BUFFER-SIZE n existem
 
 Uma pessoa *normal* usaria um comando do tipo `int fd = open("arquivo.txt", O_RDONLY)` para gerar um fd que vai usar na sua GNL. Mas e se a pessoa decidir pedir para sua função fazer algo como `char *line = get_new_line(-42)`? Pior, e se um usuário que está usando sua GNL em total boa fé tenta executar o primeiro comando, mas esqueceu que o nome do arquivo era "Arquivo.txt" em vez de "arquivo.txt"?
 
@@ -385,7 +407,7 @@ char    *get_next_line(int fd)
 
 Mas... E se o usuário por acidente meteu um "-1" ou "-42"? Bom, vamos nos proteger contra isso também: `if (fd < 0 || BUFFER_SIZE <= 0)` agora que nossa função retorna _NULL_ se o fd ou BUFFER_SIZE forem inválidos, estamos protegidos contra maus usos!
 
-#### 2.e.II "E se o arquivo tem o tamanho exato de BUFFER_SIZE?"
+#### 2-e-II Se o arquivo tem o tamanho exato de BUFFER-SIZE
 
 Essa é uma pergunta cruel, criada especificamente para nos atormentar.
 
@@ -423,7 +445,7 @@ Isso parece super complexo, mas na verdade é super simples, basta adicionar uma
 
 E isso... _quase_ acaba os edgecases!
 
-#### 2.e.III "E se o aquivo tem a mesma quantidade de bytes que o BUFFER_SIZE, mas contém uma \n?"
+#### 2-e-III Se o aquivo tem a mesma quantidade de bytes que o BUFFER-SIZE mas tem um linebreak
 
 Deus do céu de onde esses sadistas inventam esses testes!?
 
@@ -453,7 +475,7 @@ Isso é seguro, porquê nessa altura, uma das duas condições são verdadeiras:
 
 Com essas últimas alterações, nós terminamos nosso get_next_line.c. Caso queira dar uma olhada, a pasta files acima contém um arquivo chamado complete_gnl.c que contém esse código.
 
-#### 2.e.IV - Round Surpresa: "E se eu usei char *buffer em vez de char buffer[]?"
+#### 2-e-IV Round Surpresa - Se eu usei ponteiro em vez de array
 
 Nessa altura, tenho que lhe abandonar. Ao meu saber, existem algumas dezenas de edgecases que só podem ocorrer se você escolheu usar vários ponteiros em vez de um array para seu buffer. A melhor forma de lidar com a lista de problemas causados por essa escolha me foi sugerida pelo aluno lgetrud: verifique todos lugares em que você faz uma cechagem se um malloc deu errado, o clássico
 ```
@@ -469,7 +491,7 @@ Daí em diante, boa sorte para reescrever o código para evitar esse erro.
 
 Se você está recebendo vários erros de "NULL_CHECK" na francinette (um erro que só pode ocorrer com os que usam ponteiros em vez de array...), esse é quase certamente o motivo: cace esses edgecases e passe logo desse projeto!
 
-## 3 - get_next_line_utils.c
+## 3 get-next-line-utils-c
 
 Vamos lá, reta final!
 
@@ -486,13 +508,13 @@ Sinceramente, se você conhece alguns truques para reduzir linhas de código, eu
 
 Sem mais delongas, vamos começar!
 
-### ft_join_free()
+### ft-join-free
 
 O coração de uma boa GNL, ft_join_free tem um propósito bem direto: vamos receber nosso buffer e a linha que estamos aos poucos construíndo para devolver para o usuário. O trabalho da ft_join_free é concatenar o que estiver em buffer para o fim da new_line, criando uma nova string, antes de dar free na new_line antiga e devolver o resultado.
 
 Vamos começar por partes então:
 
-#### ft_join_free().a : join
+#### ft-join-free-a join
 
 Ao contrário do inferno que sofremos na ft_strlcat durante a libft, concatenar uma string 
 à outra é bastante simples, só precisamos de dois iteradores para copiar, char por char, das strings para nossa nova linha, em ordem!
@@ -558,7 +580,7 @@ char	*ft_join_free(char *line, char *buffer)
 
 Agora sim, estamos seguros, e já fizemos boa parte do trabalho: criamos uma nova linha, uma que contém tudo que estava dentro da new_line antes _e_ o que quer que estivesse dentro do buffer!
 
-#### ft_join_free().b : free
+#### ft-join-free-b free
 
 Eu _queria_ dizer que essa parte do trabalho é simples, basta jogar um `free(new_line)` logo antes do retorno, mas é um pouco mais chato que isso: nós, como coders responsáveis, criamos new_line e inicializamos ela como `new_line = NULL` na nossa get_new_line, para evitar acidentes com lixo de memória.
 
@@ -614,7 +636,7 @@ char	*ft_join_free(char *line, char *buffer)
 }
 ```
 
-### ft_locate_nl()
+### ft-locate-nl
 
 Depois da aventura que foi a ft_join_free, ft_locate_nl é meio sem graça... Tudo que essa função precisa fazer é dizer para quem a chamou em que index da string recebida se encontra o primeiro char \n. Caso a ft_locate_nl percorra a string inteira e não encontre um \n, ela vai retornar -1 (ela podia retornar qualquer valor negativo, mas esse específico -1 é uma ferramenta surpresa que nos ajudará mais tarde!)
 
@@ -649,7 +671,7 @@ while (str[i])
 return (-1);
 ```
 
-### ft_memmove_nl()
+### ft-memmove-nl
 
 Okay, hora da minha função favorita nessa loucura toda. Nossa ft_memmove_nl tem 2 propósitos, dependendo de 2 situações: 
 
@@ -739,7 +761,7 @@ void	ft_memmove_nl(char *buffer)
 }
 ```
 
-### ft_safe_free()
+### ft-safe-free
 
 Última parada: ft_safe_free. Sinceramente, você nem precisa dessa, é outro produto de paranóia minha.
 
@@ -786,7 +808,7 @@ char	*ft_safe_free(char *line, char *buffer)
 
 Novamente, você provavelmente pode pular essa, um simples "if (new_line) free(new_line)" deveria ser o bastante em erros de leitura mas bem, eu sou paranóico xD
 
-## 4 - get_next_line_bonus.c
+## 4 get-next-line-bonus-c
 
 Bem, agora chegamos na parte mais hilária dessa jornada: se você criou seu GNL com um array em vez de ponteiros, fazer os bônus é a coisa mais simples do universo.
 
