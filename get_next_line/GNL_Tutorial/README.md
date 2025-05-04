@@ -235,4 +235,143 @@ Com isso do nosso lado, nós podemos eficientemente guardar o que "sobrou" da ú
 ## 5 Get Next Line
 
 Este é o fim da parte teórica crianças, hora de botar a mão na massa!
-Acesse a pasta 5_get_next_line, onde o tutorial vai continuar, cobrindo em detalhe como construír sua GNL do começo ao fim!
+Eu recomendaria, do fundo de meu coração, que você tirasse esse momento para tentar escrever sua GNL. Desenhe o diagrama do código, faça notas do que vai precisar, pergunte ao chat GPT o que ele acha...
+
+Por favor, _tente_ fazer ela com base apenas nessa parte teórica, pois eu vou estar cobrindo o código num passo à passo muito minuncioso de como minha lógica funciona à seguir, e não quero que você seja roubado da chance de criar seu próprio código e acabe copiando o meu.
+
+Caso queira continuar para o passo à passo, acesse a pasta 5_get_next_line, onde o tutorial vai continuar, cobrindo em detalhe como construír sua GNL do começo ao fim!
+
+# Bonus: ponteiros vs array
+
+Bem, eu tinha que falar disso...
+
+A impressão que eu tenho é que, anos atrás, quando get_next_line foi adicionado na lista de projetos da 42, alguém escreveu um tutorial em Francês. O criador desse tutorial não percebeu que havia criado uma GNL que sempre faz memory leaks: uma GNL com ponteiros em vez de array. E desde lá, pessoas sempre copiam disso, numa bola de neve sem fim.
+
+Em minha opinião, é inquestionável que fazer GNL com ponteiros é um projeto com memory leak. A questão é: a Moulinette não faz um teste de valgrind na get_next_line. Então nós, como avaliadores, deveríamos dar 0 por memory leak nesse projeto, como somos ordenados a sempre fazer, ou considerar que "hey, a Moulinette não pega esse erro, vamos deixar só esse projeto passar com memory leak"?
+
+Pessoalmente, eu fico no segundo campo. Existem condições de dar 0 em avaliações que devemos ter controle sempre, como verificar cheats ou se o aluno não sabe seu próprio código. Porém, memory leaks _deveria_ ser algo fácil da Moulinette testar, então fica a questão: se ela não testa, é pra gente testar?
+
+Para exemplificar quão insanamente fácil seria testar isso, heis o meu tester para saber se uma GNL vaza memória por ter sido feita com ponteiros, salvo em um arquivo chamado main.c:
+```
+#include "get_next_line.h"
+#include <fcntl.h>
+
+int    main(void)
+{
+    int     fd;
+    char    *line;
+
+    fd = open("main.c", O_RDONLY);
+    line = get_next_line(fd);
+    free(line);
+    close(fd);
+    return (0);
+}
+```
+Com isso, basta ter um arquivo chamado tester.sh com o seguinte código:
+```
+cmp <(echo "All") <(valgrind --log-fd=1 ./a.out 2>&1 | awk '/were freed|leaked memory/ {print $2}')
+```
+E pronto, esse sh vai retornar nada se sua GNL não tem vazamento de memória, ou "/proc/self/fd/11 /proc/self/fd/17 differ: byte 1, line 1" se houve memory leak.
+
+Casando quão estupidamente simples esse teste é, literalmente uma main.c com apenas 8 linhas (e isso porquê eu quis fazer ela pela Norma!) e um .sh com uma única linha, com o fato de testes como esse serem comuns na Moulinette, me faz questionar: a 42 _sabe_ que GNL com ponteiros vazam memória, e decidiu que isso não importa? Porquê nada além de "a gente decidiu deixar esse passar" pode explicar o motivo de um teste tão pequeno não ser feito.
+
+Por isso, meu voto é: não, não devemos dar 0 com causa de "Memory Leak" para pessoas que escrevem o GNL com ponteiros.
+
+Agora, se me permitem me indulgir um pouco, vem a parte contraditória: apesar de considerar que, para os propósitos do projeto conforme aparece na Milestone 1, podemos deixar passar, eu considero, sem sombra de dúvida alguma, que escrever seu GNL com ponteiros em vez de array é inquestionavelmente _errado._
+
+## Motivo 1: Data
+Como discuti acima na parte teórica, um dos intuitos da GNL é nos familiarizar com variáveis estáticas. Criar um ponteiro estático que aponta para um endereço de memória do heap _não é usar variáveis estáticas._ Ao fazer isso, você está misturando os dois tipos de memória, num ato que está _implorando_ para causar problemas (problemas como o inevitável vazamento de memória de BUFFER_SIZE + 1).
+
+Além disso, ver um projeto feito com ponteiros me faz questionar: quão a sério esse aluno levou o estudo das static variables que o subject da GNL recomendou que fizéssemos?
+
+Pela primeira vez na 42, esse projeto nos convida a estudar sobre os diferentes tipos de memória do computador. Após ter criado a minha GNL, eu me sinto feliz de achar que entendo várias coisas que antes não faziam nenhum sentido para mim: "por quê eu não consigo compilar se escrever algo como `char arr[7]; arr = "Hello!;"`?" "Por quê eu preciso dar free()?" "Por quê diabos o computador _não_ me impede de escrever algo como `int *p; p = (int *)500;`, isso é loucura!"
+
+Claro, algumas (talvez todas) questões podiam/deviam ter sido consideradas lá atrás no C06. Talvez você já as tenha ponderado, não sei. Mas para mim, GNL acabou sendo um momento de aprendizado incrível... Que eu podia ter jogado completamente fora criando um ponteiro estático para o heap.
+
+## Motivo 2: get_NEXT_line, não get_ALL_lineS
+
+Um argumento comum dos que acham que GNL deve ser sempre feita com ponteiros é que "hey, se o usuário usar minha GNL para ler todas linhas de um arquivo do começo ao fim, não há memory leaks!"
+
+Para mim, esse é um argumento muito fraco, considerando que o propósito da função está no nome dela: nossa GNL deve ser capaz de retornar uma linha, duas, três, o arquivo inteiro, o usuário que vai escolher isso. Se temos a obrigação de criar nosso código sem vazamento de memória, os usos da GNL fora do escopo de "loop para ler arquivo inteiro" devem ser considerados.
+
+Considere a seguinte, 100% insana aplicação da função ft_calloc:
+```
+void    *ft_calloc(size_t n, size_t size)
+{
+	void    *p;
+    void    *leak;
+	ptr = malloc(n * size);
+	if (!p)
+		return (p);
+	ft_bzero(p, size * n);
+    if (size * n == 42)
+        leak = malloc(100);
+	return (p);
+}
+```
+Reparou aquele malloc desnecessário, toda vez que n * size é igual à 42? Esse malloc vai causar um memory leak toda vez que essa ft_calloc for chamada para alocar exatamente 42 bytes de memória... Devemos considerar que esse código não tem nenhum memory leak? Essa ft_calloc _ainda_ funciona, sempre retorna um ponteiro com o tamanho que o usuário quer: ela está ou não com defeito?
+
+Agora considere: o que uma GNL com ponteiros faz é o OPOSTO disso! Em vez de haver um caso extremo no qual ela não causa memory leaks, na verdade ela vai causar leaks em _todos possíveis usos desejados,_ exceto um caso específico.
+
+Então seria mais como se a condição desnecessária fosse `if (size *n != 42)`!
+
+## Motivo 3: "qualquer BUFFER_SIZE"
+
+Outra justificativa comum de se encontrar é que "hey, o meu GNL não dá memory leak se o usuário rodar ele com BUFFER_SIZE=1! Se você rodar com BUFFER_SIZE=2 ou mais, é culpa sua!"
+
+Assim como a anterior, em minha opinião, essa desculpa é bastante fraca. Somos claramente instruídos a criar nosso GNL para funcionar com qualquer BUFFER_SIZE positivo pedido pelo usuário.
+
+Eu estou mais que disposto a adimitir que BUFFER_SIZEs maiores do que SIZE_MAX não são nosso trabalho: o usuário está esperando receber uma string, se ele escolheu como buffer um valor maior do que é possível escrever em uma string, isso _é_ culpa dele. Porém argumentar que o usuário tem que saber que vai perder memória se não disser um BUFFER_SIZE de 1 é outra história.
+
+"Eu vou colocar na documentação" é a versão mais impressionante desse argumento. Eu concordo que, se você estivesse criando uma biblioteca para uso em C, e escrevesse na documentação da sua GNL "hey, cuidado: essa função vaza memória se você não chegar ao EOF do fd. Se quer apenas 1 ou 2 linhas, lembre de fazer um loop
+```
+while (line)
+{
+    free(line);
+    line = get_next_line(fd);
+}
+```
+ou aceite que vai perder memória. Caso não queira perder tempo fazendo isso, por favor, certifique-se de sempre rodar a função com BUFFER_SIZE = 1" seria uma solução _completamente_ aceitável.
+
+Porém, infelizmente, nós não temos o luxo de escolher a documentação de nossa GNL durante a Milestone 1. O mais perto que chegamos de ter uma documentação para ela é o subject, e o subject não diz nada sobre haver um aceitável vazamento de memória quando BUFFER_SIZE != 1.
+
+Para mim, argumentar que "se for 1 não dá problemas" é o mesmo que argumentar que esta função é uma perfeita aplicação de ft_strlen:
+```
+size_t    ft_strlen(char *str)
+{
+    return (42);
+}
+```
+Basta argumentar que "hey, desde que o usuário tenha usado essa strlen de forma correta e tenha enviado uma string que tinha 42 caractéres, minha função pega! Okay, o resultado dela dá errado para qualquer outro tamanho de string, mas existe um caso entre 0 e SIZE_MAX no qual ela dá o resultado correto, então é uma strlen perfeita!"
+
+## Motivo 4: _não_ é mais difícil
+
+Um argumento que me deixa triste por ser tão comum é que "eu vou fazer meu GNL com ponteiro em vez de array, fazer com array é confuso demais, nada faz sentido!"
+
+Esse argumento me deixa triste porquê eu sei que parte do embasamento dele é culpa minha. Existem mil tutoriais na internet ensinando a fazer o GNL com ponteiros, e mais mil que ensinam a fazer com linked lists (que no fundo quer dizer "linked list com um content de tipo ponteiro", ou seja, dá na mesma). Eu sei, eu li esses tutoriais quando estava escrevendo a minha, e meu deus, eles foram _vitais._
+
+Pessoas com muito melhor conhecimento de código e de como explicar código do que eu já fizeram isso, e eu _sei_ quão fácil é seguir os passos... E aí você tem meu código, guardado na pasta GNL_0 desse repositório: uma aberração.
+
+Se você viajasse no tempo para 3 semanas atrás e me oferecesse uma escolha: tentar entender o meu código no GNL_0 ou seguir um tutorial bem escrito de GNL com ponteiros, nem fodendo que eu escolheria a primeira opção.
+
+A questão é: o GNL salvo em GNL_0 foi produto de duas semanas de insanidade, de reparos feitos em cima de reparos feitos em cima de patches para edgecases em cima de recomendações idióticas do Chat GPT em cima de pedaços de tutoriais na internet. Eu não vou sequer começar a fingir que aquela GNL está bem escrita. Isso não quer dizer que existe uma dificuldade inerênte em escrever seu GNL com array em vez de ponteiros.
+
+Se eu quisesse, eu poderia trocar o meu GNL para uma versão de ponteiro em vez de array, bastaria trocar `static char buffer[BUFFER_SIZE + 1]` por 
+```
+static char    *buffer;
+
+if (!buffer)
+{
+    buffer = malloc(BUFFER_SIZE + 1);
+    if (!buffer)
+        return (NULL);
+}
+```
+E o resto do código inteiro seria literalmente igual. Me diga, honestamente, que essa modificação no código que se encontra na GNL_0 faria com que ele miraculosamente ficasse fácil de se ler e fizesse perfeito sentido.
+
+99% da minha motivação para passar os últimos 2 dias escrevendo esse tutorial veio da culpa que eu sinto por minha parte nesse mito. Eu espero ter escrito a lógica e o passo à passo de forma suficientemente clara para mostar que não, não é mais fácil escrever GNL com ponteiros do que com arrays. O oposto também não é verdade. Ambos métodos são tão difíceis quanto o outro, nada no desafio da GNL tem nada a ver com se seu buffer (ou leftovers ou vault ou o que quiser chamar) é um ponteiro ou um array.
+
+Vou encerrar por aqui. Caso tenha algo que queira conversar sobre o assunto, ou caso tenha se sentido perdido tentando ler esse tutorial, achar que algo que eu expliquei ficou mal explicado, o que for, não hesite em me contactar no slack, thenriqu , ou pode me procurar no Cluster 1, eu semrpe estou na fileira 12 ou na 13, sempre colado na parede!
+
+Abraços à todos, obrigado por perder tanto tempo de sua vida lendo tudo isso, e keep swimming!
