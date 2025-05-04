@@ -786,6 +786,50 @@ char	*ft_safe_free(char *line, char *buffer)
 
 Novamente, você provavelmente pode pular essa, um simples "if (new_line) free(new_line)" deveria ser o bastante em erros de leitura mas bem, eu sou paranóico xD
 
+## 4 - get_next_line_bonus.c
+
+Bem, agora chegamos na parte mais hilária dessa jornada: se você criou seu GNL com um array em vez de ponteiros, fazer os bônus é a coisa mais simples do universo.
+
+get_next_line convenientemente recebe uma int como argumento, "int fd." Para fazer sua GNL funcionar com vários fds diferentes em vez de apenas um, basta declarar seu buffer como um array de arrays. Isso é tudo!
+
+```
+char    *get_next_line(int fd)
+{
+    static char buffer[5][BUFFER_SIZE + 1];
+```
+Este é o exemplo de uma get_next_line que seria capaz de lidar com 2 arquivos ao mesmo tempo: se o usuário chamar a GNL com os fds de 0 à 2 ou com 2 fds extras para 2 arquivos, basta usar a variável int fd como index no nosso buffer para acessar "o buffer correto para este fd."
+
+Claro, 5 é um limite um pouco sem graça. Pesquisando online, você vai descobrir que "em quase todos sistemas, programas têm um limite de 1024 fds abertos." Portanto, se quiser que sua GNL funcione em quase qualquer sistema, basta criar `static char buffer[1024][BUFFER_SIZE + 1]`. Melhor ainda, que tal criar um novo macro em sua get_next_line_bonus.h:
+```
+# ifndef FD_LIMIT
+#  define FD_LIMIT 1024
+# endif
+```
+E agora você pode criar seu buffer bonus como `static char buffer[FD_LIMIT][BUFFER_SIZE + 1]` e boom! Não só sua função vai pegar em quase todos sistemas, no raro caso de um usuário estar num sistema que permite mais (ou menos!) que 1024 fds, basta ele compilar o código com `-D FD_LIMIT=2048` ou o que quer que seja o novo limite, e sua GNL vai funcionar perfeitamente!
+
+Claro, antes de encerrar tudo, lembre que você tem que usar o fd para indexar o buffer correto:
+```
+char    *get_next_line(int fd)
+{
+    static char buffer[FD_LIMIT][BUFFER_SIZE + 1];
+    char        *new_line;
+
+    if (fd < 0 || BUFFER_SIZE <= 0)
+		return (NULL);
+	new_line = NULL;
+    if (buffer[fd][0] != '\0')
+        new_line = ft_join_free(new_line, buffer[fd]);
+    if (ft_locate_nl(buffer[fd]) >= 0)
+        return (ft_handle_nl(buffer[fd], new_line));
+    new_line = ft_read_loop(buffer[fd], new_line, fd);
+    new_line = ft_handle_nl(buffer[fd], new_line);
+    return (new_line);
+}
+```
+E isso é tudo, aproveite os 25 pontos extras mais fáceis de sua vida!
+
+Como todas funções fora da get_next_line dependem de receber uma string "buffer," você não precisa fazer mais nenhuma alteração: o resto do código já funciona. Funciona tão bem que eu honestamente _esqueci_ de trocar o #include da minha get_next_line_utils_bonus.c para incluír a get_next_line_bonus.h em vez da get_next_line.h, e ainda assim o código pegou e passou pela Moulinette sem problemas xD
+
 ## Fin
 
 E aqui estamos... 
