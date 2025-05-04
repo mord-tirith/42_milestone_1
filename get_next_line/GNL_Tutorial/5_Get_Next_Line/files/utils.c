@@ -56,39 +56,36 @@ ssize_t	ft_locate_nl(char *str)
 	return (-1);
 }
 
-void	ft_memmove_nl(char *str)
+void	ft_memmove_nl(char *buffer)
 {
 	ssize_t	i;
-	ssize_t	j;
+	ssize_t	nli;
 
-	if (!str)
-		return ;
 	i = 0;
-	j = ft_locate_nl(str) + 1;
-	while (str[i + j] && j)
+	nli = ft_locate_nl(buffer) + 1;
+	while (buffer[i + nli] && nli)
 	{
-		str[i] = str[i + j];
+		buffer[i] = buffer[i + nli];
 		i++;
 	}
 	while (i < BUFFER_SIZE)
 	{
-		str[i] = '\0';
+		buffer[i] = '\0';
 		i++;
 	}
 }
 
 char	*ft_safe_free(char *line, char *buffer)
 {
-	ssize_t	i;
+	size_t	i;
 
 	if (line)
 		free(line);
-	i = ft_locate_nl(buffer);
-	while (i != -1)
+	i = 0;
+	while (i < BUFFER_SIZE)
 	{
-		buffer[i] = 42;
-		i = ft_locate_nl(buffer);
+		buffer[i] = '\0';
+		i++;
 	}
-	ft_memmove_nl(buffer);
 	return (NULL);
 }

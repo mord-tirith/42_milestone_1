@@ -125,7 +125,7 @@ Eu escolho o nome "buffer" para a variável estática da get_new_line porquê é
 
 Quando devolvemos a new_line para o usuário, se sobra dados no buffer, é para isso que um buffer serve: guardar memória que já foi baixada (ou "lida" em nosso caso) e que ainda não foi usada!
 
-#### 2.b - O loop central
+### 2.b - O loop central
 
 Agora que temos um buffer e uma new_line, é hora de jogar dados do fd para essa new_line!
 
@@ -186,7 +186,7 @@ while (1)
 {
     bytes_read = read(fd, buffer, BUFFER_SIZE);
     if (bytes_read < 0)
-        return (ft_safe_free(buffer, new_line));
+        return (ft_safe_free(new_line, buffer));
     if (bytes_read == 0)
         break ;
     new_line = ft_join_free(new_line, buffer);
@@ -209,7 +209,7 @@ static char    *ft_read_loop(char *buffer, char *new_line)
     {
         bytes_read = read(fd, buffer, BUFFER_SIZE);
         if (bytes_read < 0)
-            return (ft_safe_free(buffer, new_line)));
+            return (ft_safe_free(new_line, buffer));
         if (bytes_read == 0)
             break ;
         new_line = ft_join_free(new_line, buffer);
@@ -237,7 +237,7 @@ Experimente usar fds inválidos, arquivos com muito texto que nunca contém uma 
 
 Se divertiu? Okay, hora de adicionar uma parte vital da GNL ao nosso código: como lidamos com \n?
 
-#### 2.c - ft_handle_nl
+### 2.c - ft_handle_nl
 
 Dessa vez não vamos nem fingir que o que vamos fazer vai caber na nossa get_next_line: a norminette nos odeia demais para isso. Portanto, vamos apenas adicionar uma chamada à função que lida com \n antes de devolver a linha pro usuário:
 ```
@@ -273,7 +273,7 @@ Se rodar como está agora, vai perceber que melhoramos bastante: se tentar ler u
 
 Agora, é hora de dor de cabeça: vamos pegar a PRÓXIMA linha!
 
-#### 2.d - A próxima linha
+### 2.d - A próxima linha
 
 Graças às nossas helpers e a estarmos usando um array para nosso buffer, é muito fácil descobrirmos se estamos ou não na "primeira chamada" da GNL: basta verificarmos se o que está salvo no index 0 do buffer é ou não é um caractér nulo.
 
@@ -350,3 +350,450 @@ char    *get_next_line(int fd)
 ```
 
 E nosso trabalho está 99.9% completo!
+
+### 2.e - Todos malditos edgecases
+
+Há um milhão de edgecases quando se trabalha com GNL: exemplos de uso estranhos e/ou extremos nos quais sua GNL ainda deve retornar a linha sem problemas. Vamos começar a caçar esses um por um!
+
+#### 2.e.I - "E se o fd ou BUFFER_SIZE não existem?"
+
+Uma pessoa *normal* usaria um comando do tipo `int fd = open("arquivo.txt", O_RDONLY)` para gerar um fd que vai usar na sua GNL. Mas e se a pessoa decidir pedir para sua função fazer algo como `char *line = get_new_line(-42)`? Pior, e se um usuário que está usando sua GNL em total boa fé tenta executar o primeiro comando, mas esqueceu que o nome do arquivo era "Arquivo.txt" em vez de "arquivo.txt"?
+
+Nós _podemos_ criar várias precauções dentro do nosso loop de leitura na ft_read_loop, mas é mais fácil fazer isso no começo: vamos trocar o começo de nossa get_next_line() de 
+
+```
+char    *get_next_line(int fd)
+{
+    static char buffer[BUFFER_SIZE + 1];
+    char        *new_line;
+
+    new_line = NULL;
+```
+
+para:
+
+```
+char    *get_next_line(int fd)
+{
+    static char buffer[BUFFER_SIZE + 1];
+    char        *new_line;
+
+    if (fd < 0)
+        return (NULL);
+    new_line = NULL;
+```
+
+Mas... E se o usuário por acidente meteu um "-1" ou "-42"? Bom, vamos nos proteger contra isso também: `if (fd < 0 || BUFFER_SIZE <= 0)` agora que nossa função retorna _NULL_ se o fd ou BUFFER_SIZE forem inválidos, estamos protegidos contra maus usos!
+
+#### 2.e.II "E se o arquivo tem o tamanho exato de BUFFER_SIZE?"
+
+Essa é uma pergunta cruel, criada especificamente para nos atormentar.
+
+Até agora, nós temos presumido que a função _read()_ vai "escrever por cima" do nosso buffer, e em 99% dos casos, é exatamente isso que ela faz!
+
+Porém, quando _read()_ chega ao fim do arquivo, **ela para de ler sem tocar no buffer!**
+
+Isso faz com que um arquivo com o seguinte conteúdo: `0123456789` se comporte assim se acessado com BUFFER_SIZE = 10:
+
+* 1 - lemos 10 bytes do arquivo para o buffer, deixando isso no buffer:
+`0 1 2 3 4 5 6 7 8 9 \0`
+* 2 - devolvemos "0123456789" para o usuário como a primeira linha. Até aqui, tudo em ordem!
+* 3 - O usuário chama GNL de novo... Agora o problema começa! O caractér '0' está no começo de nosso buffer, então nossa função vai adicionar "0123456789" à nova linha de novo, oh não!
+
+Para se proteger contra isso, precisamos adicionar uma limpeza ao nosso buffer quando mandamos dados do buffer para a new_line, mas só se o buffer inteiro foi para ela!
+
+Isso parece super complexo, mas na verdade é super simples, basta adicionar uma chamada à nossa ft_memmove_nl no nosso loop de leitura quando sabemos que vamos ler de novo:
+
+```
+    while (1)
+    {
+        bytes_read = read(fd, buffer, BUFFER_SIZE);
+        if (bytes_read < 0)
+            return (ft_safe_free(new_line, buffer));
+        if (bytes_read == 0)
+            break ;
+        new_line = ft_join_free(new_line, buffer);
+        if (!new_line)
+            return (NULL);
+        if (ft_locate_nl(buffer) >= 0)
+            break ;
+        ft_memmove_nl(buffer);
+    }
+```
+
+E isso... _quase_ acaba os edgecases!
+
+#### 2.e.III "E se o aquivo tem a mesma quantidade de bytes que o BUFFER_SIZE, mas contém uma \n?"
+
+Deus do céu de onde esses sadistas inventam esses testes!?
+
+Consegue entender o problema? Nós agora limpamos nosso buffer antes de ler novamente, uma ótima idéia, mas essa limpeza tem que acontecer _depois_ de sabermos que vamos rodar o loop de novo... Mas as condições pra saber se vamos rodar o loop de novo incluem um \n, e agora!?
+
+A primeira vez que entendi que era isso que os testes "giant_line_nl" e "alternate_line_nl_with_nl" da francinette estavam testando, eu quis desistir de tudo. Por sorte, a solução era mais fácil do que meu drama na hora me fez imaginar: nós só entramos na função ft_read_loop se já tratamos de restos no buffer. Assim sendo, basta limparmos o buffer antes de entrar no loop de leitura!
+
+```
+    ft_memmove_nl(buffer);
+    while (1)
+    {
+        bytes_read = read(fd, buffer, BUFFER_SIZE);
+        if (bytes_read < 0)
+            return (ft_safe_free(new_line, buffer));
+        if (bytes_read == 0)
+            break ;
+        new_line = ft_join_free(new_line, buffer);
+        if (!new_line)
+            return (NULL);
+        if (ft_locate_nl(buffer) >= 0)
+            break ;
+        ft_memmove_nl(buffer);
+    }
+```
+
+Isso é seguro, porquê nessa altura, uma das duas condições são verdadeiras: ou havia coisas salvas no buffer e nossa condicional `if (buffer[0] != '\0'` já tratou de salvar o que estava lá dentro de nossa new_line, ou o buffer está vazio, caso no qual não importa muito se nós limpamos ele ou não!
+
+Com essas últimas alterações, nós terminamos nosso get_next_line.c. Caso queira dar uma olhada, a pasta files acima contém um arquivo chamado complete_gnl.c que contém esse código.
+
+#### 2.e.IV - Round Surpresa: "E se eu usei char *buffer em vez de char buffer[]?"
+
+Nessa altura, tenho que lhe abandonar. Ao meu saber, existem algumas dezenas de edgecases que só podem ocorrer se você escolheu usar vários ponteiros em vez de um array para seu buffer. A melhor forma de lidar com a lista de problemas causados por essa escolha me foi sugerida pelo aluno lgetrud: verifique todos lugares em que você faz uma cechagem se um malloc deu errado, o clássico
+```
+char    *ptr;
+
+ptr = malloc(1);
+if (!ptr)
+    return (NULL);
+```
+E, uma de cada vez, troque as condicionais de `if (!ptr)` para `if (ptr)`: isso vai simular um erro de malloc em cada um dos seus mallocs. Sua get_next_line deveria retornar _NULL_ em todos esses casos, mas é provável que algum deles cause um erro de segmentação em vez de um retorno de nulo: ache os que estão causando isso, e você achou um dos edgecases criados por ter usado ponteiros.
+
+Daí em diante, boa sorte para reescrever o código para evitar esse erro.
+
+Se você está recebendo vários erros de "NULL_CHECK" na francinette (um erro que só pode ocorrer com os que usam ponteiros em vez de array...), esse é quase certamente o motivo: cace esses edgecases e passe logo desse projeto!
+
+## 3 - get_next_line_utils.c
+
+Vamos lá, reta final!
+
+Nosso códio na get_new_line.c depende de 5 helper functions para correr sem problemas. Uma delas você pode copiar direto da libft: ft_strlen, então não vamos nem falar dela.
+
+Quanto às outras, nós temos que criar:
+
+* ft_join_free - uma versão especial da ft_strjoin.
+* ft_locate_nl - uma versão estranha da ft_strchr.
+* ft_memmove_nl - talvez a mais estranha de todas, nossa "limpadora de buffer"
+* ft_safe_free - uma economizadora de linhas xD
+
+Sinceramente, se você conhece alguns truques para reduzir linhas de código, eu diria que nem precisa da ft_safe_free, e se souber como fazer matemática com ponteiros nem precisa da ft_locate_nl e ft_strlen. Eu decidi criar a GNL com essas 5 para maximizar legibilidade do código, mas se quer ver uma coisa um pouco absurda, olhe o monstro de Frankenstein possuído pelo demônio que eu enviei na pasta GNL_0.
+
+Sem mais delongas, vamos começar!
+
+### ft_join_free()
+
+O coração de uma boa GNL, ft_join_free tem um propósito bem direto: vamos receber nosso buffer e a linha que estamos aos poucos construíndo para devolver para o usuário. O trabalho da ft_join_free é concatenar o que estiver em buffer para o fim da new_line, criando uma nova string, antes de dar free na new_line antiga e devolver o resultado.
+
+Vamos começar por partes então:
+
+#### ft_join_free().a : join
+
+Ao contrário do inferno que sofremos na ft_strlcat durante a libft, concatenar uma string 
+à outra é bastante simples, só precisamos de dois iteradores para copiar, char por char, das strings para nossa nova linha, em ordem!
+
+```
+char    *bigger_line;
+ssize_t i;
+ssize_t j;
+
+big_line = malloc(sizeof(char) * (ft_strlen(line) + ft_strlen(buffer) + 1));
+i = -1;
+j = -1;
+```
+
+O -1 nos dois iteradores é um truque para nos economizar 3 linhas, pois se começamos eles como -1 nós podemos aumentar o iterador na própria condição do loop, tornando algo como
+```
+while (new_line[i])
+{
+    bigger_line[i] = new_line[i];
+    i++;
+}
+```
+No loop super simplificado:
+```
+while (new_line[++i])
+    bigger_line[i] = new_line[i];
+```
+
+ft_join_free é de longe a maior função que vamos construír nesse projeto, então toda e qualquer linha que podemos salvar nos ajuda a agradar a norminette.
+
+Agora que temos nossas 3 variáveis necessárias criadas e inicializadas, podemos fazer o trabalho de concatenar:
+```
+while (new_line[++i])
+    bigger_line[i] = new_line[i];
+while (buffer[++j])
+    bigger_line[i + j] = buffer[j];
+bigger_line[i + j] = '\0';
+```
+ESPERA! 
+"bigger_line" foi criada com um malloc, e aqui estamos nós, mandando o programa escrever chars dentro dela, presumindo que nosso malloc deu certo, isso não pode! Então, vamos encerrar o trabalho de concatenação, prendendo o processo dentro de uma condicional que só permite ele acontecer se o malloc foi bem sucedido:
+
+```
+char	*ft_join_free(char *line, char *buffer)
+{
+	size_t	i;
+	size_t	j;
+	char	*big_line;
+
+	big_line = malloc(sizeof(char) * (ft_strlen(line) + ft_strlen(buffer) + 1));
+	if (big_line)
+	{
+		i = -1;
+		j = -1;
+		while (line[++i])
+			big_line[i] = line[i];
+		while (buffer[++j])
+			big_line[i + j] = buffer[j];
+		big_line[i + j] = '\0';
+	}
+    return (big_line);
+}
+```
+
+Agora sim, estamos seguros, e já fizemos boa parte do trabalho: criamos uma nova linha, uma que contém tudo que estava dentro da new_line antes _e_ o que quer que estivesse dentro do buffer!
+
+#### ft_join_free().b : free
+
+Eu _queria_ dizer que essa parte do trabalho é simples, basta jogar um `free(new_line)` logo antes do retorno, mas é um pouco mais chato que isso: nós, como coders responsáveis, criamos new_line e inicializamos ela como `new_line = NULL` na nossa get_new_line, para evitar acidentes com lixo de memória.
+
+Porém, isso quer dizer que, algumas vezes, nossa ft_join_free vai estar lidando com uma linha que não existe, e aqui estamos nós, acessando endereços de memória, como um bando de idiotas!
+
+Por sorte, corrigir esse problema não é tão complexo, basta a gente garantir que a variável new_line _sempre_ existe, verificando se ela é nula no começo da função:
+```
+if (!new_line)
+    new_line = malloc(1);
+```
+E... Opa, pera, ah não: fizemos um malloc, precisamos ter certeza que ele funcionou x.x
+
+E é assim que essa estranha e aparentemente repetitiva condicional é criada:
+
+```
+if (!new_line)
+{
+    new_line = malloc(1);
+    if (!new_line)
+        return (NULL);
+    new_line[0] = '\0';
+}
+```
+Ufa... Agora sim, podemos considerar nossa ft_join_free completa:
+
+```
+char	*ft_join_free(char *line, char *buffer)
+{
+	size_t	i;
+	size_t	j;
+	char	*big_line;
+
+	if (!line)
+	{
+		line = malloc(1);
+		if (!line)
+			return (NULL);
+		line[0] = '\0';
+	}
+	big_line = malloc(sizeof(char) * (ft_strlen(line) + ft_strlen(buffer) + 1));
+	if (big_line)
+	{
+		i = -1;
+		j = -1;
+		while (line[++i])
+			big_line[i] = line[i];
+		while (buffer[++j])
+			big_line[i + j] = buffer[j];
+		big_line[i + j] = '\0';
+	}
+	free(line);
+	return (big_line);
+}
+```
+
+### ft_locate_nl()
+
+Depois da aventura que foi a ft_join_free, ft_locate_nl é meio sem graça... Tudo que essa função precisa fazer é dizer para quem a chamou em que index da string recebida se encontra o primeiro char \n. Caso a ft_locate_nl percorra a string inteira e não encontre um \n, ela vai retornar -1 (ela podia retornar qualquer valor negativo, mas esse específico -1 é uma ferramenta surpresa que nos ajudará mais tarde!)
+
+Essencialmente, ela é quase _igual_ à ft_strchr, só que em vez de devolver um ponteiro para o char buscado ou NULL se o char não se encontra na string, ela devolve um index ou um -1. Além disso, ao contrário da ft_strchr, nossa ft_locate_nl não aceita outros chars como alvo da busca: é \n ou nada!
+
+```
+ssize_t	ft_locate_nl(char *str)
+{
+	ssize_t	i;
+
+	if (!str)
+		return (-1);
+	i = 0;
+}
+```
+Como vamos lidar com strings, é ideal usarmos size_t em vez de int para nosso iterador 
+
+Caso nunca tenha entendido o motivo disso, é simples: strings possuem "SIZE_MAX" como seu limite de caractéres. Isso quer dizer que uma string pode muito bem ter 2147483648 caractéres nela, se SIZE_MAX for grande o bastante pra isso em seu sistema. Se você usar int em vez de size_t, essa hipotética super string causaria problemas!
+
+Enfim, como nós precisamos poder retornar valores negativos também, vamos usar ssize_t!
+
+Além disso, só por segurança, vamos checar se str não é nula antes de começar a fuçar dentro dela.
+
+Isso feito, o resto é banal:
+```
+while (str[i])
+{
+    if (str[i] == '\n')
+        return (i);
+    i++;
+}
+return (-1);
+```
+
+### ft_memmove_nl()
+
+Okay, hora da minha função favorita nessa loucura toda. Nossa ft_memmove_nl tem 2 propósitos, dependendo de 2 situações: 
+
+* 1: mover tudo que está depois de um \n no buffer para o começo dele, ou
+* 2: limpar o buffer inteiro, se não há nenhum \n nele.
+
+O motivo disso é simples: se nós já escrevemos o que estava no buffer para a new_line e um \n estava no meio dessas coisas, nós precisamos garantir que, se o usuário chamar get_new_line de novo, apenas o que estava depois daquele \n no buffer vai ser adicionado à nova linha gerada.
+
+Num exemplo simples, imagine que nosso buffer tinha o seguinte conteúdo após uma leitura:
+
+`Strange, but it's true:\nI can't get ove\0`
+
+Nós vamos devolver "Strange, but it's true\n" para o usuário, sem mistérios aqui, mas precisamos guardar "I can't get ove\0", se não a próxima vez que o usuário chamar get_next_line ele vai receber um cortado "r the way you love me like you do\n" em vez da letra correta da música do Queen, "I can't get over the way you love me like you do\n".
+
+Então nós precisamos de duas coisas: um iterador que aponte para o começo do buffer, e um iterador que aponte para onde achamos o \n nele!
+
+Vamos inicializar eles assim:
+```
+void	ft_memmove_nl(char *buffer)
+{
+	ssize_t	i;
+	ssize_t	nli;
+
+	i = 0;
+	nli = ft_locate_nl(buffer);
+```
+Usei "nli" como nome do segundo iterador, podemos chamar ele de "new_line_index." Após essa inicialização, esses são os lugares onde nossos iteradores apontam:
+
+```
+Strange, but it's true:\nI can't get ove\0
+i                      nli
+```
+Daqui em diante, só precisamos copiar o que está escrito no índice nli para o índice i, correto? ERRADO!
+
+Lembre, que nós temos que apagar até _um char depois da \n!_ Bom, sem drama, só precisamos inicializar nli assim: `nli = ft_locate_nl + 1`.
+
+Melhor parte: lembra como eu disse que "retornar exatamente -1 na ft_locate_nl ia nos ajudar mais tarde"? Bem, essa é a hora! Se não há nenhum \n em nosso buffer, nli vai ser inicializada com valor _0_ em vez de _-1_ graças à essa mudança. Isso quer dizer que nós podemos usar nli para verificar se estamos usando ft_memmove_nl para "puxar o buffer para trás" ou para "limpar tudo que está escrito nele"!
+
+Armados com nossa nova nli, "puxar o buffer para o começo" é simples:
+```
+while (buffer[nli] && nli)
+{
+    buffer[i] = buffer[nli];
+    nli++;
+    i++;
+}
+```
+Simples, eu disse =)
+
+Quando nli chegar no fim do buffer, isso quer dizer que "o texto que estava no buffer depois da \n" acabou de ser copiado para o começo. No nosso exemplo, esse seria nosso buffer depois desse loop:
+
+`I can't get ove's true:\nI can't get ove\0`
+
+Agora que acabamos de copiar de depois da \n para o começo, só precisamos limpar o resto do buffer:
+
+```
+while (buffer[i])
+{
+    buffer[i] = '\0';
+    i++;
+}
+```
+Repare que, quando nli é inicializada com valor 0 (produto de ft_locate_nl ter retornado -1) nós pulamos direto para essa parte do loop, com i em valor 0: limpeza completa!
+
+Isso _deveria_ ser o bastante, mas por pura paranóia, eu sempre me pergunto "e se houver um \0 solto no meio do meu buffer?" Eu não sei explicar **como** um \0 teria parado lá, mas nunca se sabe! Então, só para ter 100% de certeza que o buffer foi propriamente limpo, eu prefiro usar BUFFER_SIZE nessa condicional: `while (i < BUFFER_SIZE)` isso garante, sem sombra de dúvida alguma, que mesmo que nosso buffer tivesse `abc\0 Muahaha coisas escondidas!\0` escrito dentro dele, nós _ainda_ limparíamos ele todo. 
+
+No fim das contas, nossa ft_memmove_nl acaba com esse conteúdo:
+```
+void	ft_memmove_nl(char *buffer)
+{
+	ssize_t	i;
+	ssize_t	nli;
+
+	i = 0;
+	nli = ft_locate_nl(buffer) + 1;
+	while (buffer[nli] && nli)
+	{
+		buffer[i] = buffer[nli];
+		i++;
+        nli++;
+	}
+	while (i < BUFFER_SIZE)
+	{
+		buffer[i] = '\0';
+		i++;
+	}
+}
+```
+
+### ft_safe_free()
+
+Última parada: ft_safe_free. Sinceramente, você nem precisa dessa, é outro produto de paranóia minha.
+
+ft_safe_free tem um trabalho simples: garantir, sem sombra de dúvida alguma, que nós retornamos NULL e deixamos um buffer 100% limpo para trás quando ocorre um erro de malloc ou de leitura.
+
+Primeiro, fazemos isso dando um "free seguro" em new_line:
+
+```
+if (new_line)
+    free(new_line);
+```
+
+Depois disso, temos que garantir que o buffer está completamente limpo:
+
+```
+size_t  i;
+
+i = 0;
+while (i < BUFFER_SIZE)
+{
+    buffer[i] = '\0';
+    i++;
+}
+```
+
+E isso é tudo, completando a função com:
+
+```
+char	*ft_safe_free(char *line, char *buffer)
+{
+	size_t	i;
+
+	if (line)
+		free(line);
+	i = 0;
+	while (i < BUFFER_SIZE)
+	{
+		buffer[i] = '\0';
+		i++;
+	}
+	return (NULL);
+}
+```
+
+Novamente, você provavelmente pode pular essa, um simples "if (new_line) free(new_line)" deveria ser o bastante em erros de leitura mas bem, eu sou paranóico xD
+
+## Fin
+
+E aqui estamos... 
+
+Foi uma jornada cruel e longa, mas chegamos ao fim!
+
+Aprendemos sobre variáveis estáticas, caçamos edgecases, perdemos a sanidade um pouco (ou um muito em meu caso)...
+
+No geral, GNL é meu projeto favorito da Milestone 1, o que pode ou pode não ser mero resultado de síndrome de Estocolmo.
+
+Caso você tenha alguma dúvida, reclamação, queira me xingar por usar array em vez de ponteiros ou encontre algum problema no código, não hesite em me contactar no slack: thenriqu !
