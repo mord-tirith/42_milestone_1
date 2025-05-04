@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   gnl_utils.c                                        :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: thenriqu <thenriqu@student.42porto.com>    +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/03 17:51:42 by thenriqu          #+#    #+#             */
-/*   Updated: 2025/05/03 20:12:51 by thenriqu         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include "gnl.h"
 
 size_t	ft_strlen(char *str)
@@ -37,7 +25,7 @@ char	*ft_join_free(char *line, char *buffer)
 			return (NULL);
 		line[0] = '\0';
 	}
-	big_line = malloc(sizeof(char) * (ft_strlen(line), ft_strlen(buffer) + 1));
+	big_line = malloc(sizeof(char) * (ft_strlen(line) + ft_strlen(buffer) + 1));
 	if (big_line)
 	{
 		i = -1;
@@ -76,10 +64,8 @@ void	ft_memmove_nl(char *str)
 	if (!str)
 		return ;
 	i = 0;
-	j = ft_locate_nl(str);
-	if (j == -1)
-		j = 0;
-	while (i < j)
+	j = ft_locate_nl(str) + 1;
+	while (str[i + j] && j)
 	{
 		str[i] = str[i + j];
 		i++;

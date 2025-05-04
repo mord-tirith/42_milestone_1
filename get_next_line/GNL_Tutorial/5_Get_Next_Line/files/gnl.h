@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   gnl.h                                              :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: thenriqu <thenriqu@student.42porto.com>    +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/03 17:50:41 by thenriqu          #+#    #+#             */
-/*   Updated: 2025/05/03 20:12:00 by thenriqu         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #ifndef GNL_H
 # define GNL_H
 
@@ -19,5 +7,13 @@
 
 # include <stdlib.h>
 # include <unistd.h>
+
+char	*get_next_line(int fd);
+
+size_t	ft_strlen(char *str);
+char	*ft_join_free(char *line, char *buffer);
+ssize_t	ft_locate_nl(char *str);
+void	ft_memmove_nl(char *str);
+char	*ft_safe_free(char *line, char *buffer);
 
 #endif
